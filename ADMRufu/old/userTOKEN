@@ -1,0 +1,991 @@
+#!/bin/bash
+
+USRdatabase="${ADM_user}/ADMuser"
+[[ ! -d ${ADM_user}/B-ADMuser ]] && mkdir ${ADM_user}/B-ADMuser
+
+err_fun(){
+  case $1 in
+    1)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Cliente Nulo")"; sleep 2s; tput cuu1; tput dl1;;
+    2)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Nombre de Cliente muy corto")"; sleep 2s; tput cuu1; tput dl1;;
+    3)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Nombre de Cliente muy largo")"; sleep 2s; tput cuu1; tput dl1;;
+    4)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Contraseña Nula")"; sleep 2s; tput cuu1; tput dl1;;
+    5)tput cuu1; tput dl1 && msg -verm "$(fun_trans "TOKEN corto, verifi catidad caracteres")"; sleep 2s; tput cuu1; tput dl1;;
+    6)tput cuu1; tput dl1 && msg -verm "$(fun_trans "TOKEN largo, verifi catidad caracteres")"; sleep 2s; tput cuu1; tput dl1;;
+    7)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Duracion Nula")"; sleep 2s; tput cuu1; tput dl1;;
+    8)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Duracion invalida utilize numeros")"; sleep 2s; tput cuu1; tput dl1;;
+    9)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Duracion maxima y de un año")"; sleep 2s; tput cuu1; tput dl1;;
+    11)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Limite Nulo")"; sleep 2s; tput cuu1; tput dl1;;
+    12)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Limite invalido utilize numeros")"; sleep 2s; tput cuu1; tput dl1;;
+    13)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Limite maximo de 999")"; sleep 2s; tput cuu1; tput dl1;;
+    14)tput cuu1; tput dl1 && msg -verm "$(fun_trans "Cliente o TOKEN ya existe")"; sleep 2s; tput cuu1; tput dl1;;
+  esac
+}
+
+data_user(){
+	local tmpdir="${ADM_user:-/etc/ADMRufu/user}/userTMP/users"
+	local line u gecos pass f _t m
+	local -A S_STAT=() S_EXP=() P_TAG=() P_VAL=() TMPMIN=()
+	local -a USERLIST=() MON=()
+
+	local R=$'\e[0m' V M2 Z A bar bar3 dat_us
+	_t=$(msg -verd "");  V="${_t%$R}"
+	_t=$(msg -verm2 ""); M2="${_t%$R}"
+	_t=$(msg -azu "");   Z="${_t%$R}"
+	_t=$(msg -ama "");   A="${_t%$R}"
+	bar=$(msg -bar); bar3=$(msg -bar3)
+
+	for m in 1 2 3 4 5 6 7 8 9 10 11 12; do
+		MON[$((m-1))]=$(date -d "2001-$(printf '%02d' "$m")-01" +%b)
+	done
+
+	if [[ -r /etc/shadow ]]; then
+		while IFS=: read -r name p2 _ _ _ _ _ exp _; do
+			[[ "$p2" == \$* ]] && S_STAT[$name]="ULK" || S_STAT[$name]="LOK"
+			[[ -n "$exp" ]] && S_EXP[$name]="$exp"
+		done < /etc/shadow
+	fi
+
+	if [[ -d "$tmpdir" ]]; then
+		for f in "$tmpdir"/*; do
+			[[ -f "$f" ]] && TMPMIN[${f##*/}]="$(<"$f")"
+		done
+	fi
+
+	while IFS= read -r line; do
+		[[ "$line" == *home* ]] || continue
+		[[ "$line" == *false* ]] || continue
+		[[ "$line" == *syslog* ]] && continue
+		[[ "$line" == *::/* ]] && continue
+		u=${line%%:*}
+		IFS=: read -r _ _ _ _ gecos _ _ <<< "$line"
+		P_TAG[$u]=${gecos%%,*}
+		if [[ "$gecos" == *,* ]]; then P_VAL[$u]=${gecos#*,}; else P_VAL[$u]=""; fi
+		USERLIST+=("$u")
+	done < <(sort /etc/passwd)
+
+	local found=0
+	for u in "${USERLIST[@]}"; do [[ "${P_TAG[$u]}" == "token" ]] && found=1 && break; done
+	[[ $found -eq 0 ]] && print_center -verm2 "NO HAY CLIENTES TOKEN REGISTRADOS" && return 1
+
+	printf -v dat_us '%-20s%-12s%-8s%s' 'Cliente' 'Fecha' 'Dias' 'Statu'
+	printf '%s\n' "${Z}  N°  ${dat_us}${R}"
+	printf '%s\n' "$bar"
+
+	local i=1 now z era doe yoe yy doy mp dd mm
+	now=$(date +%s)
+	for u in "${USERLIST[@]}"; do
+		[[ "${P_TAG[$u]}" != "token" ]] && continue
+		local fecha epoch mes_dia ano exp EXPTIME sin_fecha stat
+		if [[ -n "${TMPMIN[$u]+set}" ]]; then
+			fecha="${TMPMIN[$u]}min"; sin_fecha='[0]'; epoch=""
+		elif [[ -n "${S_EXP[$u]+set}" ]]; then
+			sin_fecha='[X]'
+			z=$(( S_EXP[$u] + 719468 ))
+			era=$(( z / 146097 ))
+			doe=$(( z - era*146097 ))
+			yoe=$(( (doe - doe/1460 + doe/36524 - doe/146096) / 365 ))
+			yy=$(( yoe + era*400 ))
+			doy=$(( doe - (365*yoe + yoe/4 - yoe/100) ))
+			mp=$(( (5*doy + 2)/153 ))
+			dd=$(( doy - (153*mp+2)/5 + 1 ))
+			mm=$(( mp < 10 ? mp+3 : mp-9 ))
+			(( mm <= 2 )) && yy=$((yy+1))
+			printf -v fecha '%s %02d, %d' "${MON[$((mm-1))]}" "$dd" "$yy"
+			epoch=$(( S_EXP[$u] * 86400 ))
+		else
+			sin_fecha='[X]'; epoch=""; fecha="never"
+		fi
+
+		printf -v us '%-12s' "$u"
+		pass="${P_VAL[$u]}"
+		[[ "${#pass}" -gt '12' ]] && pass="Desconosida"
+		printf -v pass '%-19s' "$pass"
+
+		if [[ "${S_STAT[$u]:-LOK}" == "ULK" ]]; then stat="${V}ULK${R}"; else stat="${M2}LOK${R}"; fi
+
+		printf '%s' "  ${V}${i})${R}${M2}-${R} ${Z}${pass}${R}"
+		if [[ -z "$epoch" ]]; then
+			printf -v exp '%8s%-2s' "$sin_fecha"
+			printf -v exp '%s%-6s' "$exp" "$sin_fecha"
+			printf ' %s\n' "${M2}${fecha}${R}${V}${exp}${R}${stat}"
+		else
+			mes_dia="${fecha%%,*}"; mes_dia="${mes_dia// /}"
+			ano="${fecha##*, }"; ano="${ano:2}"
+			if [[ "$now" -gt "$epoch" ]]; then
+				printf -v exp '%-5s' "Exp"
+				printf ' %s\n' "${M2}${mes_dia}/${ano}${R}  ${M2}${exp}${R}${stat}"
+			else
+				EXPTIME="$(( (epoch - now) / 86400 ))"
+				if [[ "${#EXPTIME}" = "1" ]]; then
+					printf -v exp '%6s%-7s' "$EXPTIME"
+				elif [[ "${#EXPTIME}" = "2" ]]; then
+					printf -v exp '%7s%-6s' "$EXPTIME"
+				else
+					printf -v exp '%7s%-5s' "$EXPTIME"
+				fi
+				printf ' %s\n' "${M2}${mes_dia}/${ano}${R}${V}${exp}${R}${stat}"
+			fi
+		fi
+		printf '      %s\n' "${A}TOKEN:${R} ${Z}${us}${R}"
+		printf '%s\n' "$bar3"
+		let i++
+	done
+	tput cuu1 && tput dl1
+}
+
+#======CREAR NUEVO USUARIO===========
+#useradd -M -s /bin/false -e 2021-10-16 -K PASS_MAX_DAYS=1 ruso99
+add_user(){
+  Fecha=`date +%d-%m-%y-%R`
+  [[ $(cat /etc/passwd |grep $1: |grep -vi [a-z]$1 |grep -v [0-9]$1 > /dev/null) ]] && return 1
+  valid=$(date '+%C%y-%m-%d' -d " +$3 days")
+  clear
+  msg -bar
+  tpass=$(cat ${ADM_user}/passwd_token)
+  osl_v=$(openssl version|awk '{print $2}')
+  osl_v=${osl_v:0:5}
+  if [[ $osl_v = '1.1.1' ]]; then
+    pass=$(openssl passwd -6 $tpass)
+  else
+    pass=$(openssl passwd -1 $tpass)
+  fi
+
+  #if useradd -M -s /bin/false -e ${valid} -K PASS_MAX_DAYS=$3 -p ${pass} -c token,$1 $2 ; then
+  if useradd -M -s /bin/false -p ${pass} -c token,$1 $2 ; then
+    sleep 1s
+    chage -E ${valid} -W 0 $2
+
+    if [[ $4 = @(s|S) ]]; then
+      rm -rf /etc/openvpn/easy-rsa/pki/reqs/$1.req
+      rm -rf /etc/openvpn/easy-rsa/pki/issued/$1.crt
+      rm -rf /etc/openvpn/easy-rsa/pki/private/$1.key
+      cd /etc/openvpn/easy-rsa/
+      ./easyrsa build-client-full $1 nopass > /dev/null 2>&1
+      cd
+      cp /etc/openvpn/client-common.txt ~/$1.ovpn
+      echo "<ca>" >> ~/$1.ovpn
+      cat /etc/openvpn/easy-rsa/pki/ca.crt >> ~/$1.ovpn
+      echo "</ca>" >> ~/$1.ovpn
+      echo "<cert>" >> ~/$1.ovpn
+      cat /etc/openvpn/easy-rsa/pki/issued/$1.crt >> ~/$1.ovpn
+      echo "</cert>" >> ~/$1.ovpn
+      echo "<key>" >> ~/$1.ovpn
+      cat /etc/openvpn/easy-rsa/pki/private/$1.key >> ~/$1.ovpn
+      echo "</key>" >> ~/$1.ovpn
+      echo "<tls-auth>" >> ~/$1.ovpn
+      cat /etc/openvpn/ta.key >> ~/$1.ovpn
+      echo "</tls-auth>" >> ~/$1.ovpn
+
+      cd $HOME
+      zip ./$1.zip ./$1.ovpn > /dev/null 2>&1
+      rm ./$1.ovpn > /dev/null 2>&1
+
+      zip_ovpn="$HOME/$1.zip"
+
+    fi
+
+  	print_center -verd "$(fun_trans "Usuario Creado con Exito")"
+  else
+  	print_center -verm2 "$(fun_trans "Error, Usuario no creado")"
+  	msg -bar
+  	sleep 3
+  	return
+  fi
+  msg -bar
+}
+
+mostrar_usuarios(){
+  for u in `cat /etc/passwd|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w 'token'|awk -F ':' '{print $1}'|sort`; do
+    echo "$u"
+  done
+}
+
+new_user(){
+  fpass="${ADM_user}/passwd_token" && [[ ! -e "${fpass}" ]] && touch ${fpass}
+  apass=$(cat ${ADM_user}/passwd_token)
+  if [[ -z "$apass" ]]; then
+    clear
+    msg -bar
+    print_center -ama "NO HAY CONTRASEÑA TOKEN CONFIGURADA\nCONFIGURE UNA CONTRASEÑA PARA CONTINUAR"
+    enter
+    tpass
+  fi
+  clear
+  usuarios_ativos=('' $(mostrar_usuarios))
+  msg -bar
+  print_center -ama "$(fun_trans "CREAR USUARIOS")"
+  msg -bar
+  data_user
+  back
+
+  while true; do
+    msg -ne "$(fun_trans "Nombre De cliente"): "
+    read cliente
+    cliente="$(echo $cliente|sed 'y/áÁàÀãÃâÂéÉêÊíÍóÓõÕôÔúÚñÑçÇªº/aAaAaAaAeEeEiIoOoOoOuUnNcCao/')"
+    cliente="$(echo $cliente|sed -e 's/[^a-z0-9 -]//ig')"
+    if [[ -z $cliente ]]; then
+      err_fun 1 && continue
+    elif [[ "${cliente}" = "0" ]]; then
+      return
+    elif [[ "${#cliente}" -lt "4" ]]; then
+      err_fun 2 && continue
+    elif [[ "${#cliente}" -gt "20" ]]; then
+      err_fun 3 && continue
+    elif [[ "$(echo ${usuarios_ativos[@]}|grep -w "$cliente")" ]]; then
+      err_fun 14 && continue
+    fi
+    break
+  done
+
+  while true; do
+    msg -ne "$(fun_trans "TOKEN")"
+    read -p ": " token
+    token="$(echo $token|sed 'y/áÁàÀãÃâÂéÉêÊíÍóÓõÕôÔúÚñÑçÇªº/aAaAaAaAeEeEiIoOoOoOuUnNcCao/')"
+    if [[ -z $token ]]; then
+      err_fun 4 && continue
+    elif [[ "${#token}" -lt "10" ]]; then
+      err_fun 5 && continue
+    elif [[ "${#token}" -gt "20" ]]; then
+      err_fun 6 && continue
+    fi
+    break
+  done
+
+  while true; do
+    msg -ne "$(fun_trans "Tiempo de coneccion")"
+    read -p ": " diasuser
+    if [[ -z "$diasuser" ]]; then
+      err_fun 7 && continue
+    elif [[ "$diasuser" != +([0-9]) ]]; then
+      err_fun 8 && continue
+    elif [[ "$diasuser" -gt "360" ]]; then
+      err_fun 9 && continue
+    fi 
+    break
+  done
+
+  [[ $(dpkg --get-selections|grep -w "openvpn"|head -1) ]] && [[ -e /etc/openvpn/openvpn-status.log ]] && {
+
+    while [[ ${newfile} != @(s|S|y|Y|n|N) ]]; do
+      msg -ne "$(fun_trans "Crear Archivo") OpenVPN? [S/N]: "
+      read -e -i S newfile
+    done
+  }
+
+  add_user "${cliente}" "${token}" "${diasuser}" "${newfile}"
+
+  msg -ne " $(fun_trans "IP del Servidor"): " && msg -ama "    $(fun_ip)"
+  msg -ne " $(fun_trans "Cliente"): " && msg -ama "            $cliente"
+  msg -ne " $(fun_trans "Dias de Duracion"): " && msg -ama "   $diasuser"
+  msg -ne " $(fun_trans "Fecha de Expiracion"): " && msg -ama "$(date "+%F" -d " + $diasuser days")"
+  [[ ! -z "$zip_ovpn" ]] && msg -ne " $(fun_trans "Archivo OVPN"): " && msg -ama "       $zip_ovpn"
+  msg -ne " $(fun_trans "TOKEN"): " && msg -ama "$token"
+  msg -bar
+  print_center -ama "►► Presione enter para continuar ◄◄"
+  read
+  return 1
+}
+#===================================
+
+#======CREAR CLIENTE TOKEN TEMPORAL======
+userTMP(){
+	local cliente token tmp pass tpass osl_v tmp_dir script
+	fpass="${ADM_user}/passwd_token" && [[ ! -e "${fpass}" ]] && touch ${fpass}
+	if [[ -z "$(cat ${fpass})" ]]; then
+		clear
+		msg -bar
+		print_center -ama "NO HAY CONTRASEÑA TOKEN CONFIGURADA\nCONFIGURE UNA CONTRASEÑA PARA CONTINUAR"
+		enter
+		tpass
+		[[ -z "$(cat ${fpass})" ]] && return
+	fi
+	tpass=$(cat ${fpass})
+	clear
+	msg -bar
+	print_center -ama "$(fun_trans "CREAR CLIENTE TOKEN TEMPORAL")"
+	print_center -ama "Escriba 0 para volver"
+	msg -bar
+
+	while true; do
+		msg -ne "$(fun_trans "Nombre De cliente"): "
+		read cliente || return
+		cliente="$(echo $cliente|sed 'y/áÁàÀãÃâÂéÉêÊíÍóÓõÕôÔúÚñÑçÇªº/aAaAaAaAeEeEiIoOoOoOuUnNcCao/' 2>/dev/null || echo $cliente)"
+		cliente="$(echo $cliente|sed -e 's/[^a-z0-9 -]//ig')"
+		if [[ -z $cliente ]]; then
+			err_fun 1 && continue
+		elif [[ "${cliente}" = "0" ]]; then
+			return
+		elif [[ "${#cliente}" -lt "4" ]]; then
+			err_fun 2 && continue
+		elif [[ "${#cliente}" -gt "20" ]]; then
+			err_fun 3 && continue
+		elif grep -q ":token,${cliente}:" /etc/passwd; then
+			err_fun 14 && continue
+		fi
+		break
+	done
+
+	while true; do
+		msg -ne "$(fun_trans "TOKEN")"
+		read -p ": " token || return
+		token="$(echo $token|sed 'y/áÁàÀãÃâÂéÉêÊíÍóÓõÕôÔúÚñÑçÇªº/aAaAaAaAeEeEiIoOoOoOuUnNcCao/' 2>/dev/null || echo $token)"
+		if [[ -z $token ]]; then
+			err_fun 4 && continue
+		elif [[ "${token}" = "0" ]]; then
+			return
+		elif [[ "${#token}" -lt "10" ]]; then
+			err_fun 5 && continue
+		elif [[ "${#token}" -gt "20" ]]; then
+			err_fun 6 && continue
+		elif id "$token" &>/dev/null; then
+			err_fun 14 && continue
+		fi
+		break
+	done
+
+	while true; do
+		msg -ne "$(fun_trans "Duracion en minutos")"
+		read -p ": " tmp || return
+		if [[ -z "$tmp" ]]; then
+			err_fun 7 && continue
+		elif [[ "$tmp" = "0" ]]; then
+			return
+		elif [[ "$tmp" != +([0-9]) ]]; then
+			err_fun 8 && continue
+		fi
+		break
+	done
+
+	# misma logica que add_user: usuario = TOKEN, contraseña = contraseña token general, comentario = token,cliente
+	osl_v=$(openssl version|awk '{print $2}')
+	osl_v=${osl_v:0:5}
+	if [[ $osl_v = '1.1.1' ]]; then
+		pass=$(openssl passwd -6 "$tpass")
+	else
+		pass=$(openssl passwd -1 "$tpass")
+	fi
+
+	if ! useradd -M -s /bin/false -p "${pass}" -c "token,${cliente}" "$token"; then
+		print_center -verm2 "$(fun_trans "Error, Usuario no creado")"
+		msg -bar
+		sleep 3
+		return
+	fi
+
+	# guarda los minutos para mostrarlos en la lista
+	tmp_dir="${ADM_user:-/etc/ADMRufu/user}/userTMP/users"
+	mkdir -p "$tmp_dir"
+	echo "$tmp" > "$tmp_dir/$token"
+
+	# script que borra el cliente al terminar el tiempo
+	script="/tmp/admtmp-$token.sh"
+	cat > "$script" <<EOS
+#!/bin/bash
+sleep $(( tmp * 60 ))
+pkill -u "$token" &>/dev/null
+userdel --force "$token" &>/dev/null
+rm -f "$tmp_dir/$token"
+rm -f "$script"
+EOS
+	chmod +x "$script"
+	nohup bash "$script" &>/dev/null &
+
+	clear
+	msg -bar
+	print_center -verd "$(fun_trans "Cliente Temporal Creado con Exito")"
+	msg -bar
+	msg -ne " $(fun_trans "IP del Servidor"): " && msg -ama "    $(fun_ip)"
+	msg -ne " $(fun_trans "Cliente"): " && msg -ama "            $cliente"
+	msg -ne " $(fun_trans "Duracion"): " && msg -ama "           $tmp minutos"
+	msg -ne " $(fun_trans "TOKEN"): " && msg -ama "$token"
+	msg -bar
+	print_center -ama "►► Presione enter para continuar ◄◄"
+	read
+}
+#===========================================
+
+#=====REMOVER USUARIO=======================
+rm_user(){
+  #nome
+  if userdel --force "$1" ; then
+    sed -i "/$1/d" ${ADM_user}/passwd
+    rm -f "${ADM_user:-/etc/ADMRufu/user}/userTMP/users/$1"
+  	print_center -verd "[$(fun_trans "Removido")]"
+  else
+  	print_center -verm "[$(fun_trans "No Removido")]"
+  fi
+}
+
+remove_user(){
+	clear
+	usuarios_ativos=('' $(mostrar_usuarios))
+  msg -bar
+	print_center -ama "$(fun_trans "REMOVER USUARIOS")"
+	msg -bar
+	data_user
+	back
+
+	print_center -ama "$(fun_trans "Escriba o Seleccione un Usuario")"
+	msg -bar
+	unset selection
+	while [[ -z ${selection} ]]; do
+		msg -nazu "$(fun_trans "Seleccione Una Opcion"): " && read selection
+		tput cuu1 && tput dl1
+	done
+	[[ ${selection} = "0" ]] && return
+
+  client_chek=$(cat /etc/passwd|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w 'token')
+
+	if [[ ! $(echo "${selection}" | egrep '[^0-9]') ]]; then
+		usuario_del="${usuarios_ativos[$selection]}"
+	else
+    usuario_del=$(echo "$client_chek"|grep -w "$selection"|awk -F ':' '{print $1}')
+	fi
+	[[ -z $usuario_del ]] && {
+		msg -verm "$(fun_trans "Error, Cliente Invalido")"
+		msg -bar
+		return 1
+	}
+	[[ ! $(echo ${usuarios_ativos[@]}|grep -w "$usuario_del") ]] && {
+		msg -verm "$(fun_trans "Error, Cliente Invalido")"
+		msg -bar
+		return 1
+	}
+
+	client=$(echo "$client_chek"|grep -w "$usuario_del"|awk -F ':' '{print $5}'|cut -d ',' -f2)
+
+  print_center -ama "$(fun_trans "Cliente Seleccionado"): $client"
+	pkill -u $usuario_del
+	droplim=`droppids|grep -w "$usuario_del"|awk '{print $2}'` 
+	kill -9 $droplim &>/dev/null
+	rm_user "$usuario_del"
+	msg -bar
+	sleep 3
+}
+
+#========RENOVAR USUARIOS==========
+
+renew_user_fun(){
+  #nome dias
+  datexp=$(date "+%F" -d " + $2 days") && valid=$(date '+%C%y-%m-%d' -d " + $2 days")
+  #if chage -M $2 -E $valid $1 ; then
+  if chage -E $valid $1 ; then
+    if [[ $(passwd --status $1|cut -d ' ' -f2) = "L" ]]; then
+      read -rp " $(msg -ama "DESBLOQUEAR USUARIO? [S/N]:") " -e -i S R_ULK
+      del 1
+      [[ $R_ULK = @(S|s|Y|y) ]] && usermod -U $1
+      print_center -ama "Usuario Renovado y desbloqueado"
+      print_center -verd "Con Exito"
+    else
+      print_center -ama "Usuario Renovado"
+      print_center -verd "Con Exito"
+    fi
+  else
+    print_center -verm "$(fun_trans "Error, Cliente no Renovado")"
+  fi
+}
+
+renew_user(){
+  clear
+  usuarios_ativos=('' $(mostrar_usuarios))
+  msg -bar
+  print_center -ama "$(fun_trans "RENOVAR CLIENTE")"
+  msg -bar
+  data_user
+  back
+
+  print_center -ama "$(fun_trans "Escriba o seleccione un cliente")"
+  msg -bar
+  unset selection
+  while [[ -z ${selection} ]]; do
+    msg -nazu "$(fun_trans " Seleccione una Opcion"): " && read selection
+    tput cuu1 && tput dl1
+  done
+
+  [[ ${selection} = "0" ]] && return
+
+  client_chek=$(cat /etc/passwd|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w 'token')
+
+  if [[ ! $(echo "${selection}" | egrep '[^0-9]') ]]; then
+    useredit="${usuarios_ativos[$selection]}"
+  else
+    useredit=$(echo "$client_chek"|grep -w "$selection"|awk -F ':' '{print $1}')
+  fi
+
+  [[ -z $useredit ]] && {
+    msg -verm "$(fun_trans "Error, Cliente Invalido")"
+    msg -bar
+    sleep 3
+    return 1
+  }
+
+  [[ ! $(echo ${usuarios_ativos[@]}|grep -w "$useredit") ]] && {
+    msg -verm "$(fun_trans "Error, Cliente Invalido")"
+    msg -bar
+    sleep 3
+    return 1
+  }
+
+  client=$(echo "$client_chek"|grep -w "$useredit"|awk -F ':' '{print $5}'|cut -d ',' -f2)
+
+  while true; do
+    msg -ne "$(fun_trans "Nuevo Tiempo de Duracion de"): $client"
+    read -p ": " diasuser
+    if [[ -z "$diasuser" ]]; then
+      echo -e '\n\n\n'
+      err_fun 7 && continue
+    elif [[ "$diasuser" != +([0-9]) ]]; then
+      echo -e '\n\n\n'
+      err_fun 8 && continue
+    elif [[ "$diasuser" -gt "360" ]]; then
+      echo -e '\n\n\n'
+      err_fun 9 && continue
+    fi
+    break
+  done
+  msg -bar
+  renew_user_fun "${useredit}" "${diasuser}"
+  msg -bar
+  sleep 3
+}
+
+eliminar_all(){
+  title "ELIMINAR TODOS LOS CLIENTES"
+  msg -ne " [S/N]: "
+  read opcion
+  [[ "${opcion}" != @(S|s) ]] && return 1
+  enter
+  service dropbear stop &>/dev/null
+  service sshd stop &>/dev/null
+  service ssh stop &>/dev/null
+  service stunnel4 stop &>/dev/null
+  service squid stop &>/dev/null
+
+  cat_users=$(cat /etc/passwd|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w "token"|sort)
+
+  for user in `echo "$cat_users"|awk -F ':' '{print $1}'`; do
+    userpid=$(ps -u $user |awk {'print $1'})
+    kill "$userpid" 2>/dev/null
+    client=$(echo "$cat_users"|grep -w "$user"|awk -F ':' '{print $5}'|cut -d ',' -f2)
+    userdel --force $user
+    user2=$(printf '%-15s' "$client")
+    echo -e " $(msg -azu "CLIENTE:") $(msg -ama "$user2")$(msg -verm2 "Eliminado")"
+  done
+  service sshd restart &>/dev/null
+  service ssh restart &>/dev/null
+  service dropbear start &>/dev/null
+  service stunnel4 start &>/dev/null
+  service squid restart &>/dev/null
+  msg -bar
+  print_center -ama "CONEXIONES ELIMINANDOS"
+  enter
+  return 1
+}
+
+ts_get_sec(){
+  read -r h m s <<< $(echo $1 | tr ':' ' ' )
+  [[ $h = @(08|09) ]] && h=$(echo ${s:1})
+  [[ $m = @(08|09) ]] && m=$(echo ${s:1})
+  [[ $s = @(08|09) ]] && s=$(echo ${s:1})
+  echo $(((h*60*60)+(m*60)+s))
+}
+
+ts_get_con(){
+  declare -A conect
+  mesdia=$(date|cut -d' ' -f2,3)
+  if [[ $(echo ${mesdia:0:2}) =~ $numero ]]; then
+    mes=$(echo "$mesdia"|cut -d ' ' -f2)
+    dia=$(echo "$mesdia"|cut -d ' ' -f1)
+    mesdia="$mes $dia"
+  fi
+  cat /var/log/auth.log|grep "$mesdia" > /var/log/authday.log
+  logins="$(cat /var/log/authday.log|grep -v root|grep 'dropbear\|sshd'|grep -w 'Password auth succeeded\|Accepted password for')"
+  [[ -z ${logins} ]] && return
+  while read line; do
+    if [[ $(echo "$line"|grep 'dropbear') ]];then
+      data=$(echo "$line"|cut -d ' ' -f3,5,10|sed "s/]:\|'//g"|sed 's/\[/ /g')
+    elif [[ $(echo "$line"|grep 'sshd') ]]; then
+      data=$(echo "$line"|cut -d ' ' -f3,5,9|sed 's/]://g'|sed 's/\[/ /g')
+    fi
+    pid=$(echo "$data"|cut -d ' ' -f3)
+    timeOut=$(cat /var/log/authday.log|grep "$pid"|grep 'Exit\|closed'|cut -d ' ' -f3)
+    [[ -z ${timeOut} ]] && timeOut='open'
+    start_ts="$(echo "$data"|cut -d ' ' -f1)"
+    if [[ "${timeOut}" = 'open' ]]; then 
+      stop_ts="$(printf '%(%H:%M:%S)T')"
+    else
+      stop_ts="${timeOut}"
+    fi
+    START=$(ts_get_sec $start_ts)
+    STOP=$(ts_get_sec $stop_ts)
+
+    if [[ $START -gt $STOP ]]; then
+      DIFF=$((START-STOP))
+      else
+      DIFF=$((STOP-START))
+    fi
+    h="$((DIFF/60/60))" && [[ "${#h}" = 1 ]] && h="0$h"
+    m="$((DIFF/60%60))" && [[ "${#m}" = 1 ]] && m="0$m"
+    s="$((DIFF%60))" && [[ "${#s}" = 1 ]] && s="0$s"
+    tiempo="$h:$m:$s"
+    name=$(echo "$data"|cut -d ' ' -f4)
+    conect["${name}"]="${data} ${timeOut} ${tiempo}"
+  done <<< $(echo "${logins}")
+  printf "%s\n" "${conect[@]}"
+}
+
+sshmonitor(){
+  clear
+  cab=$(printf '%-15s%-13s%-15s%-9s' 'USUARIO' 'STATUS' 'CONEXIONES' 'TIEMPO')
+  msg -bar 
+  echo -e "\E[41;1;37m $cab\E[0m"
+  msg -bar
+  print_center -ama "Analizando usuarios..."
+  sleep 2
+  del 1
+  ts_conect_user=$(ts_get_con)
+  tput cuu1 && tput dl1
+  cat_users=$(cat "/etc/passwd"|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|sort)
+    for i in `echo "$cat_users"|awk -F ':' '{print $1}'`; do
+        user="$i"
+        s2ssh="$(echo "$cat_users"|grep -w "$i"|awk -F ':' '{print $5}'|cut -d ',' -f1)"
+
+        if [[ "$(echo "$cat_users"| grep -w $i| wc -l)" = "1" ]]; then
+          sqd="$(ps -u $user | grep sshd | wc -l)"
+        else
+          sqd=00
+        fi
+
+        [[ "$sqd" = "" ]] && sqd=0
+        if [[ -e /etc/openvpn/openvpn-status.log ]]; then
+          ovp="$(cat /etc/openvpn/openvpn-status.log | grep -E ,"$i", | wc -l)"
+        else
+          ovp=0
+        fi
+
+        if netstat -nltp|grep 'dropbear'> /dev/null;then
+          drop="$(droppids | grep "$i" | wc -l)"
+        else
+          drop=0
+        fi
+        
+        cnx=$(($sqd + $drop))
+        conex=$(($cnx + $ovp))
+
+        tst="$(echo "$ts_conect_user"|grep "$i"|cut -d ' ' -f6)"
+        if [[ -z ${tst} ]]; then
+          timerr="00:00:00"
+        else
+          timerr="${tst}"
+        fi
+        
+        if [[ $ovp -gt 0 ]]; then
+          tmp2=$(printf '%(%H:%M:%S)T\n')
+          tmp1="$(grep -w "$i" /etc/openvpn/openvpn-status.log |awk '{print $4}'| head -1)"
+          [[ "$tmp1" = "" ]] && tmp1="00:00:00" && tmp2="00:00:00"
+          var1=`echo $tmp1 | cut -c 1-2`
+          var2=`echo $tmp1 | cut -c 4-5`
+          var3=`echo $tmp1 | cut -c 7-8`
+          var4=`echo $tmp2 | cut -c 1-2`
+          var5=`echo $tmp2 | cut -c 4-5`
+          var6=`echo $tmp2 | cut -c 7-8`
+          calc1=`echo $var1*3600 + $var2*60 + $var3 | bc`
+          calc2=`echo $var4*3600 + $var5*60 + $var6 | bc`
+          seg=$(($calc2 - $calc1))
+          min=$(($seg/60))
+          seg=$(($seg-$min*60))
+          hor=$(($min/60))
+          min=$(($min-$hor*60))
+          timerusr=`printf "%02d:%02d:%02d \n" $hor $min $seg;`
+          timerr=$(echo "$timerusr" | sed -e 's/[^0-9:]//ig' )
+        fi
+
+        if [[ "$s2ssh" != @(hwid|token) ]]; then
+          user=$(printf '%-15s' "$i")
+          con=$(printf '%-11s' "$conex/$s2ssh")
+        else
+          fix="$(echo "$cat_users"|grep -w "$i"|awk -F ':' '{print $5}'|cut -d ',' -f2)"
+          user=$(printf '%-15s' "$fix")
+          con=$(printf '%-11s' "$(echo $s2ssh|awk '{print toupper($0)}')")
+        fi
+
+        if [[ $conex -eq 0 ]]; then
+           status=$(printf '%-16s' 'Offline')
+           echo -e " $(msg -ama "$user")$(msg -verm2 "$status")$(msg -verd "$con")$(msg -ama "$timerr")"
+        else
+           status=$(printf '%-16s' 'Online')
+           echo -e " $(msg -ama "$user")$(msg -verd "$status")$(msg -verd "$con")$(msg -ama "$timerr")"
+        fi
+        msg -bar3
+      done
+    tput cuu1 && tput dl1
+    msg -bar
+    print_center -ama "►► Presione enter para continuar ◄◄"
+    read
+}
+
+detail_user(){
+	clear
+	usuarios_ativos=('' $(mostrar_usuarios))
+	if [[ -z ${usuarios_ativos[@]} ]]; then
+		msg -bar
+		print_center -verm2 "$(fun_trans "Ningun Cliente registrado")"
+		msg -bar
+		sleep 3
+		return
+	else
+		msg -bar
+		print_center -ama "$(fun_trans "DETALLES DEL LOS CLIENTES")"
+		msg -bar
+	fi
+	data_user
+	enter
+}
+
+block_user(){
+  clear
+  usuarios_ativos=('' $(mostrar_usuarios))
+  msg -bar
+	print_center -ama "$(fun_trans "BLOQUEAR/DESBLOQUEAR CLIENTE")"
+	msg -bar
+  data_user
+  back
+
+  print_center -ama "$(fun_trans "Escriba o Seleccione Un Cliente")"
+  msg -bar
+  unset selection
+  while [[ ${selection} = "" ]]; do
+    echo -ne "\033[1;37m Seleccione: " && read selection
+    tput cuu1 && tput dl1
+  done
+  [[ ${selection} = "0" ]] && return
+
+  client_chek=$(cat /etc/passwd|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w 'token')
+
+  if [[ ! $(echo "${selection}" | egrep '[^0-9]') ]]; then
+    usuario_del="${usuarios_ativos[$selection]}"
+  else
+    usuario_del=$(echo "$client_chek"|grep -w "$selection"|awk -F ':' '{print $1}')
+  fi
+  [[ -z $usuario_del ]] && {
+    msg -verm "$(fun_trans "Error, Cliente Invalido")"
+    msg -bar
+    return 1
+  }
+  [[ ! $(echo ${usuarios_ativos[@]}|grep -w "$usuario_del") ]] && {
+    msg -verm "$(fun_trans "Error, Cliente Invalido")"
+    msg -bar
+    return 1
+  }
+
+  client=$(echo "$client_chek"|grep -w "$usuario_del"|awk -F ':' '{print $5}'|cut -d ',' -f2)
+
+  msg -nama "   $(fun_trans "Cliente"): $client >>>> "
+
+  if [[ $(passwd --status $usuario_del|cut -d ' ' -f2) = "P" ]]; then
+    pkill -u $usuario_del &>/dev/null
+    droplim=`droppids|grep -w "$usuario_del"|awk '{print $2}'` 
+    kill -9 $droplim &>/dev/null
+    usermod -L $usuario_del &>/dev/null
+    sleep 2
+    msg -verm2 "$(fun_trans "Bloqueado")"
+  else
+  	usermod -U $usuario_del
+  	sleep 2
+  	msg -verd "$(fun_trans "Desbloqueado")"
+  fi
+  enter
+}
+
+rm_vencidos(){
+	title "REMOVER CLIENTES VENCIDOS"
+	print_center -ama " Removera todo los clientes token expirado"
+	msg -bar
+	msg -ne " Continua [S/N]: "
+	read opcion
+	tput cuu1 && tput dl1
+	[[ "$opcion" != @(s|S|y|Y) ]] && return
+
+	expired="$(fun_trans "Expirado")"
+	removido="$(fun_trans "Removido")"
+	DataVPS=$(date +%s)
+
+	while read user; do
+		DataUser=$(chage -l "$user"|sed -n '4p'|awk -F ': ' '{print $2}')
+		[[ "$DataUser" = @(never|nunca) ]] && continue
+		#[[ "$DataUser" = "ene 01, 1970" ]] && DataUser="Jan 01, 1970"
+		DataSEC=$(date +%s --date="$DataUser")
+
+		if [[ "$DataSEC" -lt "$DataVPS" ]]; then
+			pkill -u $user
+			droplim=`droppids|grep -w "$user"|awk '{print $2}'` 
+			kill -9 $droplim &>/dev/null
+      client=$(cat /etc/passwd|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w 'token'|grep -w "$user"|awk -F ':' '{print $5}'|cut -d ',' -f2)
+			userdel $user
+			print_center -ama "$client $expired ($removido)"
+			sleep 1
+		fi
+	done <<< "$(mostrar_usuarios)"
+	enter
+}
+
+limiter(){
+
+	ltr(){
+		clear
+		msg -bar
+    l_cron=$(cat /var/spool/cron/crontabs/root|grep -w 'limitador.sh'|grep -w 'token')
+    if [[ -z "$l_cron" ]]; then
+      echo '0 1 * * * /etc/ADMRufu/install/limitador.sh --token' >> /var/spool/cron/crontabs/root
+      print_center -verd "limitador de expirados programado\nse ejecutara todos los dias a las 1hs am\nsegun la hora programada en el servidor"
+      enter
+      return
+    else
+      sed -i '/limitador.sh --token/d' /var/spool/cron/crontabs/root
+      print_center -verm2 "limitador de expirados detenido"
+      enter
+      return   
+    fi
+	}
+
+	log(){
+		clear
+		msg -bar
+		print_center -ama "REGISTRO DEL LIMITADOR"
+		msg -bar
+		[[ ! -e ${ADM_user}/limit.log ]] && touch ${ADM_user}/limit.log
+		if [[ -z $(cat ${ADM_user}/limit.log) ]]; then
+			print_center -ama "no ahy registro de limitador"
+			msg -bar
+			sleep 2
+			return
+		fi
+		msg -teal "$(cat ${ADM_user}/limit.log)"
+		msg -bar
+		print_center -ama "►► Presione enter para continuar o ◄◄"
+		print_center -ama "►► 0 para limpiar registro ◄◄"
+		read opcion
+		[[ $opcion = "0" ]] && echo "" > ${ADM_user}/limit.log
+	}
+
+	clear
+	msg -bar
+	print_center -ama "LIMITADOR DE CUENTAS"
+	msg -bar
+	menu_func "LIMTADOR DE EXPIRADOS" "LIMITADOR DE DATOS $(msg -verm2 "(no diponible)")" "LOG DEL LIMITADOR"
+	back
+	msg -ne " opcion: "
+	read opcion
+	case $opcion in
+		1)ltr;;
+		2);;
+		3)log;;
+		0)return;;
+	esac
+}
+
+USER_MODE(){
+  title "SELECCIONE EL MODO QUE USARA POR DEFECTO"
+  menu_func "SSH" "HWID"
+  back
+  opcion=$(selection_fun 2)
+  case $opcion in
+    1) echo "userSSH" > ${ADM_user}/userMODE
+       clear
+       msg -bar
+       print_center -verd "MODO SSH ACTIVA"
+       enter;;
+    2) echo "userHWID" > ${ADM_user}/userMODE
+       clear
+       msg -bar
+       print_center -verd "MODO HWID ACTIVA"
+       enter;;
+    0)return 1;;
+  esac
+}
+
+tpass(){
+  fpass="${ADM_user}/passwd_token" && [[ ! -e "${fpass}" ]] && touch ${fpass}
+  apass=$(cat ${ADM_user}/passwd_token)
+  title -ama "CONFIGURACION DE CONTRASEÑA TOKEN"
+  if [[ ! -z "$apass" ]]; then
+    print_center -azu "CONTRASEÑA ACTUAL: $apass"
+    msg -bar
+  fi
+  while true; do
+    echo -e " $(msg -verm3 "╭╼╼╼[")$(msg -azu "INGRESE SU CONTRASEÑA, ENTER PARA CANSELAR")$(msg -verm3 "]")"
+    echo -ne " $(msg -verm3 "╰╼")\033[37;1m> " && read npass
+    npass="$(echo $npass|sed 'y/áÁàÀãÃâÂéÉêÊíÍóÓõÕôÔúÚñÑçÇªº/aAaAaAaAeEeEiIoOoOoOuUnNcCao/')"
+    if [[ -z $npass ]]; then
+      break
+    elif [[ "${#npass}" -lt "6" ]]; then
+      err_fun 5 && tput cuu1 && tput dl1 && continue
+    elif [[ "${#npass}" -gt "32" ]]; then
+      err_fun 6 && tput cuu1 && tput dl1 && continue
+    fi
+    break
+  done
+  [[ -z "$npass" ]] && return 1
+  tput cuu1 && tput dl1 && tput cuu1 && tput dl1
+  printf "$npass" > ${ADM_user}/passwd_token
+  clear
+  msg -bar
+  echo -e " $(msg -verd "╭╼╼╼╼╼╼╼╼╼[")$(msg -azu "SE GUARDO LA NUEVA CONTRASEÑA")$(msg -verd "]")"
+  echo -ne " $(msg -verd "╰╼")\033[37;1m> " && msg -azu "$npass"
+  cat_users=$(cat "/etc/passwd"|grep 'home'|grep 'false'|grep -v 'syslog'|grep -v '::/'|grep -w 'token'|awk -F ':' '{print $1}')
+  [[ ! -z "$cat_users" ]] && msg -bar && msg -nama " APLICAR A TODOS LOS CLIENTES [S/N]: " && read allpass
+  if [[ "$allpass" = @(S|s) ]]; then
+    msg -bar
+    print_center -ama "APLICADO CONTRASEÑA A TODO LOS CLIENTES"
+    for u in `echo "$cat_users"`; do
+      (echo $npass; echo $npass)|passwd $u 2>/dev/null
+    done
+    tput cuu1 && tput dl1
+    print_center -verd "CONTRASEÑA APLICADA A TODO LOS CLIENTES"
+  fi
+  enter
+  return 1
+}
+
+while :
+do
+
+  [[ $(cat /var/spool/cron/crontabs/root|grep -w 'limitador.sh'|grep -w 'token') ]] && lim=$(msg -verd "[ON]") || lim=$(msg -verm2 "[OFF]")
+
+	title -ama "ADMINISTRACION DE USUARIOS TOKEN"
+
+	menu_func "NUEVO CLIENTE TOKEN ✏️ " \
+"CREAR CLIENTE TEMPORAL✏️." \
+"$(msg -verm2 "REMOVER CLIENTE") 🗑 " \
+"$(msg -verd "EDITAR/RENOVAR CLIENTE") ♻️" \
+"-bar3 BLOQ/DESBLOQ CLIENTE 🔒" \
+"-bar3 CONFIGURAR CONTRASEA TOKEN" \
+"$(msg -verd "DETALLES DE TODOS CLIENTES") 🔎" \
+"MONITOR DE CLIENTES CONECTADOS" \
+"-bar3 🔒 $(msg -ama "LIMITADOR-DE-CUENTAS-EXPIRADAS") 🔒 $lim" \
+"ELIMINAR CLIENTES VENCIDOS" \
+"-bar3 ⚠️ $(msg -verm2 "ELIMINAR TODOS LOS CLIENTES") ⚠️" \
+"BACKUP CLIENTES" \
+"-bar DESACTIVAR PASS ALFANUMERICO $(msg -blu "(VULTR)")" \
+"CAMBIAR A MODO SSH/HWID"
+
+	back
+	selection=$(selection_fun 14)
+	case ${selection} in
+		0)break;;
+		1)new_user;;
+		2)userTMP;;
+		3)remove_user;;
+		4)renew_user;;
+		5)block_user;;
+		6)tpass;;
+		7)detail_user;;
+		8)sshmonitor;;
+		9)limiter;;
+		10)rm_vencidos;;
+		11)eliminar_all;;
+		12)backup;;
+		13)ULK_ALF;;
+		14)USER_MODE && break;;
+	esac
+done
