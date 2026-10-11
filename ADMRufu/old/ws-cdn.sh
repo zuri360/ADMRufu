@@ -1,5 +1,41 @@
 #!/bin/bash
 clear
+# FIX-SSH: habilita en OpenSSH los algoritmos viejos que usan muchas apps
+# (ssh-rsa, group14-sha1, aes-cbc, hmac-sha1). Evita "Cannot negotiate, proposals do not match"
+ssh_legacy(){
+    [[ ! -d /etc/ssh ]] && return
+    local conf=/etc/ssh/sshd_config.d/legacy.conf
+    mkdir -p /etc/ssh/sshd_config.d
+    cat > $conf << 'EOF'
+HostKeyAlgorithms +ssh-rsa
+PubkeyAcceptedAlgorithms +ssh-rsa
+KexAlgorithms +diffie-hellman-group14-sha1,diffie-hellman-group1-sha1,diffie-hellman-group-exchange-sha1
+Ciphers +aes128-cbc,aes256-cbc,3des-cbc
+MACs +hmac-sha1,hmac-md5
+EOF
+    grep -q '^Include /etc/ssh/sshd_config.d' /etc/ssh/sshd_config || \
+        sed -i '1i Include /etc/ssh/sshd_config.d/*.conf' /etc/ssh/sshd_config
+    if sshd -t &>/dev/null; then
+        systemctl restart ssh &>/dev/null || systemctl restart sshd &>/dev/null
+        echo -e "\033[1;33m SSH legacy:\033[1;32m algoritmos habilitados OK"
+    else
+        rm -f $conf
+        echo -e "\033[1;33m SSH legacy:\033[1;31m sshd -t fallo, no se aplico"
+    fi
+    msg -bar
+}
+
+# FIX-SSH: prueba el proxy como lo haria la app (payload + SSH)
+test_ws(){
+    local r
+    r=$(timeout 4 bash -c "exec 3<>/dev/tcp/127.0.0.1/$1; printf 'GET / HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\n\r\nSSH-2.0-test\r\n' >&3; cat <&3" 2>/dev/null | tr -d '\0')
+    if echo "$r" | grep -aq "SSH-2.0"; then
+        print_center -verd "TEST WEBSOCKET -> SSH OK"
+    else
+        print_center -ama "TEST: sin banner SSH en el puerto $1"
+    fi
+}
+
 drop_port(){
     local portasVAR=$(lsof -V -i tcp -P -n | grep -v "ESTABLISHED" |grep -v "COMMAND" | grep "LISTEN")
     local NOREPEAT
@@ -33,6 +69,7 @@ conf(){
         port=$(echo $i|awk -F ":" '{print $2}')
         echo -e " $(msg -verd "[$n]") $(msg -verm2 ">") $(msg -ama "$proto2")$(msg -azu "$port")"
         drop[$n]=$port
+        dproto[$n]=$proto
         num_opc="$n"
         let n++ 
     done
@@ -104,7 +141,7 @@ stop_ws () {
 		ck_port=$(echo "$ck_ws" | awk '{print $9}' | awk -F ":" '{print $2}')
 		for i in $ck_port; do
 			systemctl stop nodews.${i} &>/dev/null
-			systemctl disable nodews.${1} &>/dev/null
+			systemctl disable nodews.${i} &>/dev/null
 			rm /etc/systemd/system/nodews.${i}.service &>/dev/null
 		done
 		print_center -verm2 "WEBSOCKET detenido"	

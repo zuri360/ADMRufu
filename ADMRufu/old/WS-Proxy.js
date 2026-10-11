@@ -1,102 +1,40 @@
 /*
-* Proxy Bridge
-* Copyright PANCHO7532 - P7COMUnications LLC (c) 2021
-* Dedicated to Emanuel Miranda, for giving me the idea to make this :v
+* Proxy Bridge (base PANCHO7532 - P7COMUnications LLC)
+* FIX-SSH: responde 101 cuando llegan los headers y descarta todo el payload
+*          HTTP hasta ver "SSH-". Asi OpenSSH no corta con
+*          "Invalid SSH identification string". Mismos parametros:
+*          -dhost 127.0.0.1 -dport 22 -mport 80
 */
 const net = require('net');
-const stream = require('stream');
-const util = require('util');
-var dhost = "127.0.0.1";
-var dport = "8080";
-var mainPort = "8888";
-var outputFile = "outputFile.txt";
-var packetsToSkip = 0;
-var gcwarn = true;
-for(c = 0; c < process.argv.length; c++) {
-    switch(process.argv[c]) {
-        case "-skip":
-            packetsToSkip = process.argv[c + 1];
-            break;
-        case "-dhost":
-            dhost = process.argv[c + 1];
-            break;
-        case "-dport":
-            dport = process.argv[c + 1];
-            break;
-        case "-mport":
-            mainPort = process.argv[c + 1];
-            break;
-        case "-o":
-            outputFile = process.argv[c + 1];
-            break;
+const a = process.argv;
+const opt = (n, d) => { const i = a.indexOf(n); return i > -1 && a[i+1] ? a[i+1] : d; };
+const DHOST = opt('-dhost', '127.0.0.1');
+const DPORT = +opt('-dport', 22);
+const MPORT = +opt('-mport', 80);
+const RESP = 'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n';
+
+net.createServer(c => {
+  let buf = Buffer.alloc(0), ssh = null, ready = false;
+  const end = () => { c.destroy(); if (ssh) ssh.destroy(); };
+  const conectar = () => {
+    ssh = net.connect(DPORT, DHOST);
+    ssh.setNoDelay(true);
+    ssh.pipe(c);
+    ssh.on('error', end).on('close', end);
+  };
+  c.setNoDelay(true);
+  c.on('error', end).on('close', end);
+  c.on('data', d => {
+    if (ready) return ssh.write(d);
+    buf = Buffer.concat([buf, d]);
+    if (!ssh) {
+      if (buf.indexOf('SSH-') === 0) conectar();
+      else if (buf.indexOf('\r\n\r\n') > -1) { c.write(RESP); conectar(); }
     }
-}
-function gcollector() {
-    if(!global.gc && gcwarn) {
-        console.log("[WARNING] - Garbage Collector isn't enabled! Memory leaks may occur.");
-        gcwarn = false;
-        return;
-    } else if(global.gc) {
-        global.gc();
-        return;
-    } else {
-        return;
+    if (ssh) {
+      const i = buf.indexOf('SSH-');
+      if (i > -1) { ssh.write(buf.subarray(i)); buf = null; ready = true; return; }
     }
-}
-function parseRemoteAddr(raddr) {
-    if(raddr.toString().indexOf("ffff") != -1) {
-        //is IPV4 address
-        return raddr.substring(7, raddr.length);
-    } else {
-        return raddr;
-    }
-}
-setInterval(gcollector, 1000);
-const server = net.createServer();
-server.on('connection', function(socket) {
-    var packetCount = 0;
-    //var handshakeMade = false;
-    socket.write("HTTP/1.1 101 Switching Protocols\r\nContent-Length: 1048576000000\r\n\r\n");
-    console.log("[INFO] - Connection received from " + socket.remoteAddress + ":" + socket.remotePort);
-    var conn = net.createConnection({host: dhost, port: dport});
-    socket.on('data', function(data) {
-        //pipe sucks
-        if(packetCount < packetsToSkip) {
-            //console.log("---c1");
-            packetCount++;
-        } else if(packetCount == packetsToSkip) {
-            //console.log("---c2");
-            conn.write(data);
-        }
-        if(packetCount > packetsToSkip) {
-            //console.log("---c3");
-            packetCount = packetsToSkip;
-        }
-        //conn.write(data);
-    });
-    conn.on('data', function(data) {
-        //pipe sucks x2
-        socket.write(data);
-    });
-    socket.once('data', function(data) {
-        /*
-        * Nota para mas tarde, resolver que diferencia hay entre .on y .once
-        */
-    });
-    socket.on('error', function(error) {
-        console.log("[SOCKET] - read " + error + " from " + socket.remoteAddress + ":" + socket.remotePort);
-        conn.destroy();
-    });
-    conn.on('error', function(error) {
-        console.log("[REMOTE] - read " + error);
-        socket.destroy();
-    });
-    socket.on('close', function() {
-        console.log("[INFO] - Connection terminated for " + socket.remoteAddress + ":" + socket.remotePort);
-        conn.destroy();
-    });
-});
-server.listen(mainPort, function(){
-    console.log("[INFO] - Server started on port: " + mainPort);
-    console.log("[INFO] - Redirecting requests to: " + dhost + " at port " + dport);
-});
+    if (buf.length > 65536) end();
+  });
+}).listen(MPORT, () => console.log(`[INFO] WS-Proxy :${MPORT} -> ${DHOST}:${DPORT}`));
