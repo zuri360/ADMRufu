@@ -135,16 +135,14 @@ baner_fun(){
   if [[ -e "${local}" ]]; then
     echo -e " $(msg -verd "[2]") $(msg -verm2 ">") $(msg -azu "EDITAR BANNER CON NANO")"
     echo -e " $(msg -verd "[3]") $(msg -verm2 ">") $(msg -azu "RESET BANNER SSH")"
+    n=3
   fi
-  echo -e " $(msg -verd "[4]") $(msg -verm2 ">") $(msg -azu "OPENSSH MOD + CHECKUSER")"
-  n=4
   back
   opcion=$(selection_fun $n)
   case $opcion in
     1)new_banner;;
-    2)[[ -e "${local}" ]] && banner_edit;;
-    3)[[ -e "${local}" ]] && banner_reset;;
-    4)banner_mod;;
+    2)banner_edit;;
+    3)banner_reset;;
     0)return 1;;
   esac
 }
@@ -414,15 +412,16 @@ echo -e "$(msg -verd "    [21]")$(msg -verm2 ">") $(msg -azu "ACTIVAR ACCESO ROO
 echo -ne "$(msg -verd " [17]")$(msg -verm2 ">") $(msg -azu "CONFIGURAR IP DNS")  "
 echo -e "$(msg -verd " [22]")$(msg -verm2 ">") $(msg -azu "INTERFACES MENUES")"
 
-echo "$(msg -verd " [18]")$(msg -verm2 ">") $(msg -azu "GEN DOMI/CERT-SSL") $([[ -z $(ls "${ADM_crt}") ]] && echo -e "\033[1;31m○ " || echo -e "\033[1;32m◉ ")"
+echo -ne "$(msg -verd " [18]")$(msg -verm2 ">") $(msg -azu "GEN DOMI/CERT-SSL") $([[ -z $(ls "${ADM_crt}") ]] && echo -e "\033[1;31m○ " || echo -e "\033[1;32m◉ ")"
+echo -e "$(msg -verd "[23]")$(msg -verm2 ">") $(msg -azu "OPENSSH MOD + CHECKUSER")"
 
 msg -bar
-echo -e "$(msg -verd " [23]") $(msg -verm2 ">") $(msg -blu "ADMINISTRADOR DE ARCHIVOS WEB")"
-echo -e "$(msg -verd " [24]") $(msg -verm2 ">") $(msg -teal "HERRAMIENTAS y EXTRAS")"
+echo -e "$(msg -verd " [24]") $(msg -verm2 ">") $(msg -blu "ADMINISTRADOR DE ARCHIVOS WEB")"
+echo -e "$(msg -verd " [25]") $(msg -verm2 ">") $(msg -teal "HERRAMIENTAS y EXTRAS")"
 msg -bar
-echo -ne "$(msg -verd "  [0]") $(msg -verm2 ">") " && msg -bra "   \033[1;41m VOLVER \033[0m $(msg -verd "       [25]") $(msg -verm2 ">") $(msg -azu AUTO-INICIAR) ${AutoRun}" 
+echo -ne "$(msg -verd "  [0]") $(msg -verm2 ">") " && msg -bra "   \033[1;41m VOLVER \033[0m $(msg -verd "       [26]") $(msg -verm2 ">") $(msg -azu AUTO-INICIAR) ${AutoRun}" 
 msg -bar
-selection=$(selection_fun 25)
+selection=$(selection_fun 26)
 case $selection in
   0)return 0;;
   1)dropBear;;
@@ -447,9 +446,10 @@ case $selection in
   20)root_pass;;
   21)root_pass 1;;
   22)conf_menu;;
-  23)${ADM_inst}/filebrowser.sh;;
-  24)${ADMRufu}/tool_extras.sh;;
-  25)fun_autorun;;
+  23)banner_mod;;
+  24)${ADM_inst}/filebrowser.sh;;
+  25)${ADMRufu}/tool_extras.sh;;
+  26)fun_autorun;;
 esac
 }
 
