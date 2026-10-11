@@ -70,7 +70,7 @@ ARCHIVOS_OLD="bashrc budp.sh cert.sh chekup.sh chekuser.sh confDNS.sh domain.sh
 filebrowser.sh limitador.sh menu_inst.sh PDirect.py PGet.py POpen.py
 PPriv.py PPub.py slowdns.sh sockspy.sh swapfile.sh tcpbbr.sh
 tool_extras.sh userHWID userSSH userTOKEN userWG.sh
-ws-cdn.sh WS-Proxy.js menu.sh"
+ws-cdn.sh WS-Proxy.js v2ray.sh userV2ray.sh menu.sh"
 
 # destino de cada archivo (mismas reglas que verificar_arq del install.sh)
 ruta_arq(){
