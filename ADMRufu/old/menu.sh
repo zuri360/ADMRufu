@@ -200,11 +200,10 @@ banner(){
   return 1
 }
 # sin version bash: binarios de tu repo
-dropBear(){ usar_bin dropBear Utils/dropBear/dropBear; return 1; }
 epro-ws(){ usar_bin epro-ws Utils/epro-ws/epro-ws; return 1; }
 aToken-mng(){ usar_bin aToken-mng Utils/aToken/aToken-mng; return 1; }
 
-export -f bajar_url usar_bin socksPY Slowdns Stunnel banner dropBear epro-ws aToken-mng
+export -f bajar_url usar_bin socksPY Slowdns Stunnel banner epro-ws aToken-mng
 
 # Los scripts de old/ traen enlaces al repo de rudi9999 (Utils/ y online/).
 # Se cambian por tu repo para que las descargas internas

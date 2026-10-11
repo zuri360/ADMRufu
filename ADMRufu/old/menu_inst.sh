@@ -337,6 +337,26 @@ hcr_menu(){
   return 1
 }
 
+dropbear_menu(){
+  local url="https://raw.githubusercontent.com/zuri360/ADMRufu/main/ADMRufu/old/menu_dropbear.sh"
+  if [[ ! -s ${ADM_inst}/menu_dropbear.sh ]]; then
+    msg -bar
+    print_center -ama "DESCARGANDO MENU DROPBEAR..."
+    if wget -q --no-cache -T 20 -t 2 -O ${ADM_inst}/menu_dropbear.sh "$url" 2>/dev/null || curl -fsSL -m 60 -o ${ADM_inst}/menu_dropbear.sh "$url" 2>/dev/null; then
+      chmod +x ${ADM_inst}/menu_dropbear.sh
+    fi
+    if [[ ! -s ${ADM_inst}/menu_dropbear.sh ]] || head -c 20 ${ADM_inst}/menu_dropbear.sh | grep -qi '404'; then
+      rm -f ${ADM_inst}/menu_dropbear.sh
+      print_center -verm2 "No se pudo descargar menu_dropbear.sh"
+      msg -bar
+      enter
+      return 1
+    fi
+  fi
+  bash ${ADM_inst}/menu_dropbear.sh
+  return 1
+}
+
 bhttp_menu(){
   local url="https://raw.githubusercontent.com/zuri360/ADMRufu/main/ADMRufu/old/bhttp-menu.sh"
   if [[ ! -s ${ADM_inst}/bhttp-menu.sh ]]; then
@@ -424,7 +444,7 @@ msg -bar
 selection=$(selection_fun 26)
 case $selection in
   0)return 0;;
-  1)dropBear;;
+  1)dropbear_menu;;
   2)socksPY;;
   3)Stunnel;;
   4)${ADM_inst}/ws-cdn.sh;;
