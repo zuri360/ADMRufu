@@ -347,7 +347,7 @@ echo -e "$(msg -verd "  [9]")$(msg -verm2 ">") $(msg -azu "WS-EPRO       ${inst[
 
 
 echo -ne "$(msg -verd "  [4]")$(msg -verm2 ">") $(msg -azu "OVER WEBSOCKET${inst[$v_node]}")"
-echo -e "$(msg -verd " [10]")$(msg -verm2 ">") $(msg -azu "HCR           ${inst[hcr]}")"
+echo -e "$(msg -verd " [10]")$(msg -verm2 ">") $(msg -azu "HCR CUSTOM    ${inst[hcr]}")"
 echo -e "$(msg -verd "  [5]")$(msg -verm2 ">") $(msg -azu "BADVPN-UDP    ${inst[badvpn]}")"
 echo -e "$(msg -verd "  [6]")$(msg -verm2 ">") $(msg -azu "V2RAY         ${inst[v2ray]}")"
 
