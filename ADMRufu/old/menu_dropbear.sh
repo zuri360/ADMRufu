@@ -390,7 +390,7 @@ while true; do
   msg -bar3
   echo -e "${cor[2]}MENU BANNER A (RECOMENDADO 3):"
   msg -bar3
-  echo -e "\033[0;35m [\033[0;36m01\033[0;35m]\033[0;31m >${cor[3]} INSTALAR DROPBEAR $(db_estado)"
+  echo -e "\033[0;35m [\033[0;36m01\033[0;35m]\033[0;31m >${cor[3]} INSTALAR Y DESINSTALAR DROPBEAR $(db_estado)"
   echo -e "\033[0;35m [\033[0;36m02\033[0;35m]\033[0;31m >${cor[3]} Pegar BANNER Personalizado ( html , etc )"
   echo -e "\033[0;35m [\033[0;36m03\033[0;35m]\033[0;31m >${cor[3]} AGREGAR MENSAJES BANNER SSH"
   echo -e "\033[0;35m [\033[0;36m04\033[0;35m]\033[0;31m >${cor[3]} ELIMINAR BANNER ( SSH ⇿ DROPBEAR )"
