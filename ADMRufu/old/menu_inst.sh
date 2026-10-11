@@ -135,16 +135,38 @@ baner_fun(){
   if [[ -e "${local}" ]]; then
     echo -e " $(msg -verd "[2]") $(msg -verm2 ">") $(msg -azu "EDITAR BANNER CON NANO")"
     echo -e " $(msg -verd "[3]") $(msg -verm2 ">") $(msg -azu "RESET BANNER SSH")"
-    n=3
   fi
+  echo -e " $(msg -verd "[4]") $(msg -verm2 ">") $(msg -azu "OPENSSH MOD + CHECKUSER")"
+  n=4
   back
   opcion=$(selection_fun $n)
   case $opcion in
     1)new_banner;;
-    2)banner_edit;;
-    3)banner_reset;;
+    2)[[ -e "${local}" ]] && banner_edit;;
+    3)[[ -e "${local}" ]] && banner_reset;;
+    4)banner_mod;;
     0)return 1;;
   esac
+}
+
+banner_mod(){
+  local url="https://raw.githubusercontent.com/zuri360/ADMRufu/main/ADMRufu/old/menu_banner.sh"
+  if [[ ! -s ${ADM_inst}/menu_banner.sh ]]; then
+    msg -bar
+    print_center -ama "DESCARGANDO MENU BANNER..."
+    if wget -q --no-cache -T 20 -t 2 -O ${ADM_inst}/menu_banner.sh "$url" 2>/dev/null || curl -fsSL -m 60 -o ${ADM_inst}/menu_banner.sh "$url" 2>/dev/null; then
+      chmod +x ${ADM_inst}/menu_banner.sh
+    fi
+    if [[ ! -s ${ADM_inst}/menu_banner.sh ]] || head -c 20 ${ADM_inst}/menu_banner.sh | grep -qi '404'; then
+      rm -f ${ADM_inst}/menu_banner.sh
+      print_center -verm2 "No se pudo descargar menu_banner.sh"
+      msg -bar
+      enter
+      return 1
+    fi
+  fi
+  bash ${ADM_inst}/menu_banner.sh
+  return 1
 }
 
 fun_autorun () {
