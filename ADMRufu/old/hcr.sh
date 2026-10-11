@@ -27,14 +27,14 @@ opt_line() {
     echo -e " ${OPT_BRACKET}[${OPT_NUM}${num}${OPT_BRACKET}]${OPT_ARROW} >${OPT_TEXT} ${text}${NC}"
 }
 
-TTini='=====>>►► 🐼'
-TTfin='🐼 ◄◄<<====='
+TTini='=====>>►► '
+TTfin=' ◄◄<<====='
 BAR_WIDTH=54
 BARC='\033[31m'
 draw_bar() { echo -e "${BARC}$(printf '%.0s=' $(seq 1 "${BAR_WIDTH}"))${NC}"; }
 INSTALL_DIR="/etc/hcr-server"
 BINARY_PATH="${INSTALL_DIR}/hcr-server"
-BINARY_URL="https://www.dropbox.com/scl/fi/o8q0zs14a7xy03sk08a8j/hcr-server?rlkey=no7u3nggl0tw7i08rnadrao61&st=mb5b2zrg&dl=1"
+BINARY_URL="https://github.com/zuri360/ADMRufu/raw/refs/heads/main/ADMRufu/old/hcr-server"
 PORTS_FILE="${INSTALL_DIR}/ports.conf"
 DEFAULT_PORT="22"
 DEFAULT_TARGET="127.0.0.1:22"
