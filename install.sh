@@ -71,7 +71,7 @@ filebrowser.sh hcr.sh limitador.sh menu_inst.sh PDirect.py PGet.py POpen.py
 PPriv.py PPub.py slowdns.sh sockspy.sh swapfile.sh tcpbbr.sh
 tool_extras.sh userHWID userSSH userTOKEN userWG.sh
 ws-cdn.sh WS-Proxy.js v2ray.sh userV2ray.sh menu.sh bhttp-menu.sh
-menu_banner.sh"
+menu_banner.sh menu_dropbear.sh"
 
 # destino de cada archivo (mismas reglas que verificar_arq del install.sh)
 ruta_arq(){
@@ -238,6 +238,9 @@ case $1 in
     check_deps
     descargar_old;;
 esac
+
+# quita el DROPBEAR viejo (binario de Utils/dropBear), reemplazado por menu_dropbear.sh
+rm -f /etc/ADMRufu/sbin/dropBear /usr/bin/dropBear
 
 # corrige tambien los archivos que ya estaban instalados
 redirigir_repo /etc/ADMRufu/install/* /etc/ADMRufu/menu_inst.sh /etc/ADMRufu/tool_extras.sh
