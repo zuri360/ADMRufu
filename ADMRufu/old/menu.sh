@@ -122,7 +122,7 @@ locale -a 2>/dev/null | grep -qiE '^(c|en_us)\.utf-?8$' && export LC_ALL=C.UTF-8
 
 # ======================= DESCARGA DESDE TU REPOSITORIO =======================
 # Archivos de ADMRufu/old que usa el menu (igual que el install original)
-REPO_BASE="${ADM_REPO:-https://raw.githubusercontent.com/zuri360/ADMRufu-OLD/main/ADMRufu}"
+REPO_BASE="${ADM_REPO:-https://raw.githubusercontent.com/zuri360/ADMRufu/main/ADMRufu}"
 REPO_OLD="${REPO_BASE}/old"
 
 # destino de cada archivo (mismas reglas que verificar_arq del install.sh)
