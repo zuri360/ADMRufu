@@ -71,7 +71,7 @@ filebrowser.sh hcr.sh limitador.sh menu_inst.sh PDirect.py PGet.py POpen.py
 PPriv.py PPub.py slowdns.sh sockspy.sh swapfile.sh tcpbbr.sh
 tool_extras.sh userHWID userSSH userTOKEN userWG.sh
 ws-cdn.sh WS-Proxy.js v2ray.sh userV2ray.sh menu.sh bhttp-menu.sh
-menu_banner.sh menu_dropbear.sh"
+menu_banner.sh menu_dropbear.sh udp_custom.sh udp_hysteria.sh"
 
 # destino de cada archivo (mismas reglas que verificar_arq del install.sh)
 ruta_arq(){
