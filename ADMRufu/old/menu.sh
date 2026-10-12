@@ -223,128 +223,49 @@ redirigir_repo(){
 }
 export -f redirigir_repo
 
-# ======== [9] PROTOCOLOS UDP (version bash) ========
-# El binario protocolsUDP original exige licencia (/etc/ADMRufuLIC) y se
-# cierra al instante. Esta version instala UDP-CUSTOM (ePro) con el
-# servidor de tu repo: Utils/udp-custom/dev/udp-custom
-# Usa las mismas cuentas SSH del panel (usuario/contraseña).
-protocolsUDP(){
-  local dir=/etc/ADMRufu/bin
-  local bin=$dir/udp-custom conf=$dir/config.json
-  local excl=$dir/udpcustom.exclude
-  local svc=/etc/systemd/system/udpcustom.service
-
-  udp_estado(){
-    if [[ $(systemctl is-active udpcustom 2>/dev/null) = active ]]; then msg -verd "[ON]"; else msg -verm2 "[OFF]"; fi
-  }
-
-  udp_instalar(){
-    title -ama "INSTALADOR UDP-CUSTOM"
-    msg -nazu " Descargando servidor udp-custom... "
-    if bajar_url "${REPO_BASE}/Utils/udp-custom/dev/udp-custom" $bin; then
-      msg -verd "OK"
-    else
-      msg -verm2 "FALLO"
-      print_center -ama "${REPO_BASE}/Utils/udp-custom/dev/udp-custom"
-      enter; return
-    fi
-    cat > $conf <<CONF
-{
-  "listen": ":36712",
-  "stream_buffer": 33554432,
-  "receive_buffer": 83886080,
-  "auth": {
-    "mode": "passwords"
-  }
-}
-CONF
-    # udp-custom crea su propia regla iptables; aca solo se excluyen puertos
-    [[ -s $excl ]] || echo "53,5300" > $excl
-    cat > $svc <<SVC
-[Unit]
-Description=UDP-Custom (ePro Dev. Team)
-After=network.target
-
-[Service]
-User=root
-Type=simple
-WorkingDirectory=$dir/
-ExecStart=/bin/bash -c '$bin server --exclude "\$\$(cat $excl)"'
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-SVC
-    systemctl daemon-reload
-    systemctl enable udpcustom &>/dev/null
-    systemctl restart udpcustom
-    sleep 2
+# ======== [8] PROTOCOLOS UDP ========
+# Submenu que abre los scripts externos:
+#   [1] udp_custom.sh   -> UDP-CUSTOM (HTTP Custom)
+#   [2] udp_hysteria.sh -> UDP-HYSTERIA (APP MOD)
+# Si el script no esta en /etc/ADMRufu/install se descarga de tu repo.
+udp_script(){
+  local f=$1 dir=${ADM_inst:-/etc/ADMRufu/install}
+  local url="https://raw.githubusercontent.com/zuri360/ADMRufu/main/ADMRufu/old/$f"
+  if [[ ! -s $dir/$f ]]; then
     msg -bar
-    if [[ $(systemctl is-active udpcustom) = active ]]; then
-      print_center -verd "UDP-CUSTOM INSTALADO E INICIADO"
+    print_center -ama "DESCARGANDO $f..."
+    mkdir -p $dir
+    if wget -q --no-cache -T 20 -t 2 -O $dir/$f "$url" 2>/dev/null || curl -fsSL -m 60 -o $dir/$f "$url" 2>/dev/null; then
+      chmod +x $dir/$f
+    fi
+    if [[ ! -s $dir/$f ]] || head -c 20 $dir/$f | grep -qi '404'; then
+      rm -f $dir/$f
+      print_center -verm2 "No se pudo descargar $f"
       msg -bar
-      print_center -ama "En HTTP Custom usa:\nIP:1-65535@usuario:contraseña\n(las cuentas SSH del panel)"
-    else
-      print_center -verm2 "EL SERVICIO NO INICIO"
-      print_center -ama "Revisa con: journalctl -u udpcustom -n 30"
+      enter
+      return 1
     fi
-    enter
-  }
+  fi
+  # udp_hysteria.sh (PandaScript) sale con "Script no actualizado" si no existe este archivo
+  [[ $f = udp_hysteria.sh ]] && { mkdir -p /etc/adm-lite; touch /etc/adm-lite/local.txt; }
+  (cd $dir && bash $dir/$f)
+  return 1
+}
 
-  udp_excluir(){
-    title -ama "PUERTOS EXCLUIDOS DE UDP-CUSTOM"
-    print_center -azu "Actual: $(cat $excl)"
-    msg -bar
-    print_center -ama "UDP-Custom toma todos los puertos UDP\nmenos estos. Ej: 53,5300,7300"
-    msg -bar
-    in_opcion_down "Puertos separados por coma (enter = no cambiar)"
-    [[ -z $opcion ]] && return
-    if [[ ! $opcion =~ ^[0-9]+(,[0-9]+)*$ ]]; then
-      print_center -verm2 "Formato invalido"; enter; return
-    fi
-    echo "$opcion" > $excl
-    systemctl restart udpcustom
-    print_center -verd "Puertos excluidos actualizados"; enter
-  }
-
-  udp_desinstalar(){
-    title -verm "DESINSTALAR UDP-CUSTOM"
-    in_opcion -nama "Seguro? [S/N]"
-    [[ $opcion != @(s|S|y|Y) ]] && return
-    systemctl stop udpcustom &>/dev/null
-    systemctl disable udpcustom &>/dev/null
-    rm -f $svc $bin $conf $excl
-    systemctl daemon-reload
-    print_center -verd "UDP-CUSTOM DESINSTALADO"; enter
-  }
-
+protocolsUDP(){
   while :; do
     title -ama "MENU DE PROTOCOLOS UDP"
-    if [[ ! -e $svc ]]; then
-      echo -e " $(msg -verd "[1]") $(msg -verm2 ">") $(msg -azu "INSTALAR UDP-CUSTOM (HTTP Custom)")"
-      back
-      case $(selection_fun 1) in
-        1) udp_instalar;;
-        0) return 1;;
-      esac
-      continue
-    fi
-    echo -e " $(msg -azu "UDP-CUSTOM:") $(udp_estado)  $(msg -azu "PUERTO:") $(msg -verd "36712")"
-    echo -e " $(msg -azu "EXCLUIDOS:") $(msg -ama "$(cat $excl 2>/dev/null)")"
-    msg -bar
-    menu_func "INICIAR / DETENER" "REINICIAR" "PUERTOS EXCLUIDOS" "EDITAR CONFIG (NANO)" "$(msg -verm2 "DESINSTALAR UDP-CUSTOM")"
+    echo -e " $(msg -verd "[1]") $(msg -verm2 ">") $(msg -azu "INSTALAR UDP-CUSTOM (HTTP Custom)")"
+    echo -e " $(msg -verd "[2]") $(msg -verm2 ">") $(msg -azu "INSTALAR UDP-HYSTERIA (APP MOD)")"
     back
-    case $(selection_fun 5) in
-      1) if [[ $(systemctl is-active udpcustom) = active ]]; then systemctl stop udpcustom; else systemctl start udpcustom; fi; sleep 1;;
-      2) systemctl restart udpcustom; sleep 1;;
-      3) udp_excluir;;
-      4) nano $conf; systemctl restart udpcustom;;
-      5) udp_desinstalar;;
+    case $(selection_fun 2) in
+      1) udp_script udp_custom.sh;;
+      2) udp_script udp_hysteria.sh;;
       0) return 1;;
     esac
   done
 }
+export -f udp_script
 export -f protocolsUDP
 
 mkdir -p /etc/ADMRufu/install /etc/ADMRufu/tmp /etc/ADMRufu/user /etc/ADMRufu/sbin /etc/ADMRufu/source 2>/dev/null

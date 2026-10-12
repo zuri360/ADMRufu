@@ -320,7 +320,7 @@ pid_inst(){
   [[ $(systemctl is-active bilola-go-server 2>/dev/null) = 'active' ]] && inst[bhttp]="\033[1;32m[ON] "
 
   inst[UDPS]="\033[1;31m[OFF]"
-  if [[ $(systemctl is-active udprequest) = 'active' ]] || [[ $(systemctl is-active udpcustom) = 'active' ]] || [[ $(systemctl is-active zivpn) = 'active' ]] || [[ $(systemctl is-active udpmod) = 'active' ]]; then
+  if [[ $(systemctl is-active udprequest) = 'active' ]] || [[ $(systemctl is-active udpcustom) = 'active' ]] || [[ $(systemctl is-active zivpn) = 'active' ]] || [[ $(systemctl is-active udpmod) = 'active' ]] || [[ $(systemctl is-active udp-custom) = 'active' ]] || [[ $(systemctl is-active hysteria) = 'active' ]]; then
     inst[UDPS]="\033[1;32m[ON]"
   fi
 }
