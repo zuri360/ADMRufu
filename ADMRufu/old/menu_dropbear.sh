@@ -168,12 +168,14 @@ msg() {
 
 # ---------- banner ----------
 create_banner() {
-  local credit credi
-  credit=$(cat /etc/adm-lite/menu_credito 2>/dev/null || echo "Créditos")
-  credi=$(cat /etc/adm-lite/name 2>/dev/null || echo "$credit")
+  # Sin banner por defecto: si ya creaste uno en el menú de banners
+  # (/etc/bannerssh) se reutiliza; si no, queda vacío.
   mkdir -p /etc/dropbear
-  echo -e '<p style="text-align: center;"> <big><big><big><big><big><big>🐉</big></big></big></big></big></big></p>' > /etc/dropbear/banner
-  echo -e '<p style="text-align: center;"><strong><span style="color: #FF00FF;">'"$credit"'®</span> | </strong><span style="color: #483D8B;"><strong>'"$credi"'</strong></span></p>' >> /etc/dropbear/banner
+  if [[ -s "$BANNER_FILE" ]]; then
+    cat "$BANNER_FILE" > /etc/dropbear/banner
+  else
+    : > /etc/dropbear/banner
+  fi
 }
 
 # ---------- /etc/shells (parte útil de fun_log) ----------
@@ -334,7 +336,7 @@ op_pegar_banner() {
 
 # --------------------------- OPCIÓN 3 ---------------------------
 op_mensajes_banner() {
-  local sshsn sin_nao credi credit
+  local sshsn sin_nao
   echo -e "${cor[3]} Buena ELECCIÓN, tienes un 99% más de garantía"
   read -p " ¿Estás seguro? [S/N]: " -e -i s sshsn
   [[ $sshsn = @(s|S|y|Y) ]] || return
@@ -347,9 +349,6 @@ op_mensajes_banner() {
     if [[ $sin_nao = @(s|S|y|Y) ]]; then agregar_texto
     elif [[ $sin_nao = @(n|N) ]]; then break; fi
   done
-  [[ -e /root/name ]] && credi=$(head -1 /root/name) || credi="@PandaHL001"
-  [[ -e /bin/ejecutar/exito ]] && credit=$(head -1 /bin/ejecutar/exito) || credit="PandaScript"
-  echo "<p style=\"text-align: center;\"><strong><span style=\"color: #FF00FF;\">${credit}</span> |&nbsp;</strong><span style=\"color: #483D8B;\"><strong>${credi} λ</strong></span></p>" >> "$BANNER_FILE"
   aplicar_banner
 }
 
@@ -388,10 +387,10 @@ while true; do
   msg -bar
   echo -e "${cor[2]} ‍ ${cor[5]}CUENTAS SSH / SSL / DROPBEAR"
   msg -bar3
-  echo -e "${cor[2]}MENU BANNER A (RECOMENDADO 3):"
+  echo -e "${cor[2]}MENU BANNER DROPBEAR (RECOMENDADO 3):"
   msg -bar3
   echo -e "\033[0;35m [\033[0;36m01\033[0;35m]\033[0;31m >${cor[3]} INSTALAR Y DESINSTALAR DROPBEAR $(db_estado)"
-  echo -e "\033[0;35m [\033[0;36m02\033[0;35m]\033[0;31m >${cor[3]} Pegar BANNER Personalizado ( html , etc )"
+  echo -e "\033[0;35m [\033[0;36m02\033[0;35m]\033[0;31m >${cor[3]} PEGAR BANNER PERSONALIZADO ( HTML , ETC )"
   echo -e "\033[0;35m [\033[0;36m03\033[0;35m]\033[0;31m >${cor[3]} AGREGAR MENSAJES BANNER SSH"
   echo -e "\033[0;35m [\033[0;36m04\033[0;35m]\033[0;31m >${cor[3]} ELIMINAR BANNER ( SSH ⇿ DROPBEAR )"
   msg -bar3
