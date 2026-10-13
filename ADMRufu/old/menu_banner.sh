@@ -25,7 +25,8 @@ msg() {
     -verm)  echo -e "\e[33m${NG}[!] \e[31m${2}${SC}" ;;
     -verm2) echo -e "\e[31m${NG}${2}${SC}" ;;
     -bra)   echo -e "\033[1;37m${SC}${2}${SC}" ;;
-    -bar|-bar3) echo -e "${VIOLETA}$(printf '%.0s━' $(seq 1 55))${SC}" ;;
+    -bar|-bar2) echo -e "\e[31m======================================================\e[0m" ;;
+    -bar3)      echo -e "\e[31m------------------------------------------------------\e[0m" ;;
   esac
 }
 
@@ -329,7 +330,7 @@ while true; do
   msg -bar3
   echo -e "${cor[2]}MENU BANNER λ (RECOMENDADO 2):"
   msg -bar3
-  echo -e "\033[0;35m [\033[0;36m01\033[0;35m]\033[0;31m >${cor[3]} Pegar BANNER Personalizado ( html , etc )"
+  echo -e "\033[0;35m [\033[0;36m01\033[0;35m]\033[0;31m >${cor[3]} PEGAR BANNER PERSONALIZADO ( HTML , ETC )"
   echo -e "\033[0;35m [\033[0;36m02\033[0;35m]\033[0;31m >${cor[3]} AGREGAR MENSAJES BANNER SSH"
   echo -e "\033[0;35m [\033[0;36m03\033[0;35m]\033[0;31m >${cor[3]} ELIMINAR BANNER ( SSH ⇿ DROPBEAR )"
   echo -e "\033[0;35m [\033[0;36m04\033[0;35m]\033[0;31m >${cor[3]} CheckUser + BANNER \033[0;31m[ $(msg -verm2 'NUEVO') \033[0;31m]"
