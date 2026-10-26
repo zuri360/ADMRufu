@@ -55,6 +55,8 @@ data_user(){
 		[[ "$line" == *::/* ]] && continue
 		u=${line%%:*}
 		IFS=: read -r _ _ _ _ gecos _ _ <<< "$line"
+		# modo SSH: no listar clientes HWID ni TOKEN
+		[[ "${gecos%%,*}" == @(hwid|token) ]] && continue
 		if [[ "$gecos" == *,* ]]; then
 			P_LIMIT[$u]=${gecos%%,*}; P_PASS[$u]=${gecos#*,}
 		else
