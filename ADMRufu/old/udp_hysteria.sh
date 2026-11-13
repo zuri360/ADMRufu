@@ -17,7 +17,20 @@ start_menu
 clear && clear
 
 
-[[ -e /bin/ejecutar/msg ]] && source /bin/ejecutar/msg > /dev/null || source <(curl -sSL https://raw.githubusercontent.com/karl1999x/PandaScript/main/PandaScript/Otros/msg) > /dev/null
+msg() {
+  case $1 in
+    -bar3) echo -e "\e[1;31m$(printf '%0.s-' {1..54})\e[0m" ;;
+    -bar)  echo -e "\e[1;31m$(printf '%0.s=' {1..54})\e[0m" ;;
+    -aqua) shift; echo -e "\e[1;36m$*\e[0m" ;;
+    -verd) shift; echo -e "\e[1;32m$*\e[0m" ;;
+    -verm) shift; echo -e "\e[1;31m$*\e[0m" ;;
+    -ama)  shift; echo -e "\e[1;33m$*\e[0m" ;;
+    -nazu) shift; echo -e "\e[1;34m$*\e[0m" ;;
+    -nama) shift; echo -e "\e[1;33m$*\e[0m" ;;
+    -verm2) shift; echo -e "\e[1;31m$*\e[0m" ;;
+    *) echo -e "$*" ;;
+  esac
+}
 
 # Función para capturar Ctrl + C y evitar el error
 trap_ctrl_c() {
