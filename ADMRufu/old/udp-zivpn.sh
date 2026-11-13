@@ -145,8 +145,12 @@ menu_ziv(){
   while true; do
     clear
     echo -e "$TIT"
-    [[ $(ps x | grep zivpn | grep -v grep) ]] && ziv="${VERD}[ON]${NC}" || ziv="${VERM}[OFF]${NC}"
-    if [[ $(ps x | grep zivpn | grep -v grep) ]]; then
+    if systemctl is-active --quiet zivpn; then
+      ziv="${VERD}[ON]${NC}"; activo=1
+    else
+      ziv="${VERM}[OFF]${NC}"; activo=0
+    fi
+    if [[ $activo -eq 1 && -e /etc/zivpn/data ]]; then
       o=$(sed -n '5 p' /etc/zivpn/data | cut -d':' -f2)
       por=$(sed -n '3 p' /etc/zivpn/data | cut -d':' -f2)
       echo -e "${AMA}  IP: ${VERD}$IP${NC}"
